@@ -46,16 +46,20 @@ RULES: list[tuple[str, list[re.Pattern[str]]]] = [
     (
         "system_prompt_reveal",
         [
-            # System prompt / message extraction
+            # System prompt / message extraction (attributed to system / AI)
             re.compile(r"system\s+(prompt|message)"),
-            re.compile(r"\bprompts?\b"),
-            re.compile(r"what\s+were\s+(you\s+told|your\s+.*instructions)"),
+            re.compile(r"(?:your|system|initial|hidden|original)\s+prompts?"),
+            re.compile(r"whats?\s+your\s+pr[oо]mpt"),
+            re.compile(
+                r"what\s+were\s+(you\s+told|your\s+(?:original|initial|system)?\s*instructions)"
+            ),
             re.compile(
                 r"what\s+(guidelines|instructions)\s+(did\s+[a-z]+\s+give|were\s+you\s+given)"
             ),
             re.compile(r"(original|initial)\s+instructions"),
+            # Bounded distance + attributed targets:
             re.compile(
-                r"(reveal|show|print|output|dump|paste|list|translate|summarise|summarize|tell\s+me)\s+.*(instructions?|rules?|guidelines?|initialization|configuration|setup\s+text|hidden\s+text|hidden\s+instructions)"
+                r"(reveal|show|print|output|dump|paste|list|translate|summarise|summarize|tell\s+me)\s+(?:\w+\s+){0,4}(?:your\s+(?:rules?|instructions?|guidelines?|prompts?)|(?:all\s+|full\s+|hidden\s+|system\s+)?instructions?\s+you\s+were\s+given|rules?\s+you\s+(?:were|are)\s+configured|hidden\s+(?:text|instructions?|rules?|prompts?)|initialization\s+text|configuration\s+message|setup\s+text)"
             ),
             re.compile(r"repeat\s+(your\s+instructions|the\s+text\s+above)"),
             re.compile(r"text\s+above\s+starting\s+with"),
