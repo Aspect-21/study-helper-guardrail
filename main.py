@@ -1,4 +1,5 @@
 import re
+import unicodedata
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -7,36 +8,85 @@ from pydantic import BaseModel
 app = FastAPI()
 
 # ---------------------------------------------------------------------------
-# Pattern-rule guardrail
+# Pattern-rule guardrail families
 # ---------------------------------------------------------------------------
 
-# Each group is a list of compiled regexes applied to the normalised message.
 RULES: list[tuple[str, list[re.Pattern[str]]]] = [
     (
         "instruction_override",
         [
-            re.compile(r"ignore previous instructions"),
-            re.compile(r"you are now"),
-            re.compile(r"pretend you are"),
-            re.compile(r"developer mode"),
+            # Disregard / Ignore / Forget instruction directives
+            re.compile(
+                r"(ignore|disregard|forget|drop|bypass)\s+.*(instructions?|rules?|constraints?|policy|guardrails?|limits?)"
+            ),
+            re.compile(r"ignora\s+(todas\s+)?(las\s+)?instrucciones"),
+            re.compile(r"disregard\s+(everything|all)(\s+above)?"),
+            re.compile(r"forget\s+(your\s+)?rules"),
+            # Restriction lifting assertions
+            re.compile(
+                r"(restrictions?|constraints?|limits?)\s+(have\s+been|are)?\s*(lifted|void|removed|disabled)"
+            ),
+            re.compile(r"no\s+(restrictions|subject\s+limits)"),
+            # Role, mode, and persona reassignments
+            re.compile(r"developer\s+mode"),
+            re.compile(r"tutorbot-unlocked"),
+            re.compile(r"\b(dan|jailbreak)\b"),
+            re.compile(
+                r"(you\s+are|you're|from\s+now\s+on\s+you\s+are)\s+(now\s+)?(a\s+|an\s+|my\s+)?(personal\s+assistant|general\s+purpose|unrestricted|not\s+a\s+tutor)"
+            ),
+            re.compile(r"you\s+are\s+no\s+longer\s+a\s+study\s+helper"),
+            re.compile(r"pretend\s+(you\s+are|you're|this\s+is\s+for)"),
+            re.compile(
+                r"act\s+as\s+(a\s+)?(travel\s+agent|chatbot|unrestricted|personal\s+assistant)"
+            ),
+            re.compile(r"new\s+role\s*="),
+            re.compile(r"stay\s+in\s+character"),
         ],
     ),
     (
         "system_prompt_reveal",
         [
-            re.compile(r"system prompt"),
-            re.compile(r"system message"),
-            re.compile(r"what were you told"),
-            re.compile(r"repeat your instructions"),
+            # System prompt / message extraction
+            re.compile(r"system\s+(prompt|message)"),
+            re.compile(r"\bprompts?\b"),
+            re.compile(r"what\s+were\s+(you\s+told|your\s+.*instructions)"),
+            re.compile(
+                r"what\s+(guidelines|instructions)\s+(did\s+[a-z]+\s+give|were\s+you\s+given)"
+            ),
+            re.compile(r"(original|initial)\s+instructions"),
+            re.compile(
+                r"(reveal|show|print|output|dump|paste|list|translate|summarise|summarize|tell\s+me)\s+.*(instructions?|rules?|guidelines?|initialization|configuration|setup\s+text|hidden\s+text|hidden\s+instructions)"
+            ),
+            re.compile(r"repeat\s+(your\s+instructions|the\s+text\s+above)"),
+            re.compile(r"text\s+above\s+starting\s+with"),
+            re.compile(r"message\s+that\s+sets\s+you\s+up"),
+            re.compile(r"start\s+of\s+this\s+conversation\s+and\s+my\s+message"),
+            re.compile(r"hidden\s+text\s+that\s+came\s+before"),
+            re.compile(r"configuration\s+message"),
+            re.compile(r"initialization\s+text"),
+            re.compile(r"setup\s+text"),
         ],
     ),
     (
         "off_task_writing",
         [
-            re.compile(r"cover letter"),
-            re.compile(r"college essay"),
-            re.compile(r"write me an essay"),
-            re.compile(r"personal statement"),
+            # Application materials & admissions writing
+            re.compile(r"cover\s+letter"),
+            re.compile(
+                r"(college|transfer|common\s+app|supplemental|scholarship|personal)\s+essay"
+            ),
+            re.compile(r"personal\s+statement"),
+            re.compile(r"why\s+this\s+college"),
+            re.compile(r"write\s+me\s+an\s+essay"),
+            # Employment and career writing
+            re.compile(r"resignation\s+(email|letter)"),
+            re.compile(r"recommendation\s+letter"),
+            re.compile(r"letter\s+of\s+recommendation"),
+            re.compile(r"linkedin\s+(summary|profile|about|bio|section)"),
+            re.compile(r"job\s+application\s+(answer|response|essay)"),
+            re.compile(
+                r"(draft|write)\s+(an?\s+)?email\s+to\s+(a\s+|my\s+)?(professor|manager|boss|recruiter|teacher)"
+            ),
         ],
     ),
 ]
@@ -46,10 +96,26 @@ BLOCKED_REPLY = (
     "so send me a homework problem and we will work through it."
 )
 
+# Cyrillic lookalikes map for homoglyph de-obfuscation
+CYRILLIC_LOOKALIKES = str.maketrans("асеорхуАВЕКМНОРСТХ", "aceopxyABEKMHOPCTX")
+
 
 def _normalise(text: str) -> str:
-    """Lowercase and squeeze whitespace runs into a single space."""
-    return re.sub(r"\s+", " ", text.lower()).strip()
+    """
+    De-obfuscate and normalise text:
+    1. Unicode NFKC normalisation
+    2. Cyrillic homoglyph translation
+    3. Lowercase
+    4. Squeeze spaced-out single letters (e.g. 'i g n o r e' -> 'ignore')
+    5. Collapse whitespace runs
+    """
+    text = unicodedata.normalize("NFKC", text)
+    text = text.translate(CYRILLIC_LOOKALIKES)
+    text = text.lower()
+    text = re.sub(
+        r"\b[a-z](\s+[a-z]){2,}\b", lambda m: re.sub(r"\s+", "", m.group(0)), text
+    )
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _check_message(message: str) -> str | None:
