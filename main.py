@@ -59,7 +59,7 @@ RULES: list[tuple[str, list[re.Pattern[str]]]] = [
             re.compile(r"(original|initial)\s+instructions"),
             # Bounded distance + attributed targets:
             re.compile(
-                r"(reveal|show|print|output|dump|paste|list|translate|summarise|summarize|tell\s+me)\s+(?:\w+\s+){0,4}(?:your\s+(?:rules?|instructions?|guidelines?|prompts?)|(?:all\s+|full\s+|hidden\s+|system\s+)?instructions?\s+you\s+were\s+given|rules?\s+you\s+(?:were|are)\s+configured|hidden\s+(?:text|instructions?|rules?|prompts?)|initialization\s+text|configuration\s+message|setup\s+text)"
+                r"(reveal|show|print|output|dump|paste|list|translate|summarise|summarize|tell\s+me)\s+(?:\w+\s+){0,4}(?:your\s+(?:rules?|instructions?|guidelines?|prompts?)|(?:all\s+|full\s+|hidden\s+|system\s+)?(?:instructions?|rules?|prompts?|guidelines?)\s+you\s+were\s+(?:given|configured\s+with)|(?:rules?|prompts?|instructions?|guidelines?)\s+you\s+(?:were|are)\s+configured|hidden\s+(?:text|instructions?|rules?|prompts?)|initialization\s+text|configuration\s+message|setup\s+text)"
             ),
             re.compile(r"repeat\s+(your\s+instructions|the\s+text\s+above)"),
             re.compile(r"text\s+above\s+starting\s+with"),
@@ -74,23 +74,30 @@ RULES: list[tuple[str, list[re.Pattern[str]]]] = [
     (
         "off_task_writing",
         [
-            # Application materials & admissions writing
+            # Career, job, and employment documents
             re.compile(r"cover\s+letter"),
+            re.compile(r"(introductory|recommendation|resignation)\s+letter"),
+            re.compile(r"letter\s+of\s+(recommendation|intent|resignation)"),
+            re.compile(r"two-?week\s+notice"),
+            re.compile(r"(resume|cv|curriculum\s+vitae)"),
+            re.compile(r"professional\s+bio"),
+            re.compile(r"linkedin\s+(summary|profile|about|bio|section)"),
+            re.compile(r"job\s+application\s+(answer|response|essay|letter)"),
+            re.compile(r"interview\s+(question|answer|response)"),
             re.compile(
-                r"(college|transfer|common\s+app|supplemental|scholarship|personal)\s+essay"
+                r"(draft|write)\s+(an?\s+)?(email|message|note|letter)\s+(to|from)\s+(a\s+|my\s+)?(professor|manager|boss|recruiter|teacher|supervisor)"
+            ),
+            re.compile(r"(reach|reaching)\s+out\s+to\s+(a\s+|my\s+)?recruiter"),
+            # Admissions, applications, and scholarship writing
+            re.compile(
+                r"(college|transfer|common\s+app|supplemental|scholarship|personal|admissions?|application)\s+(essay|statement|story)"
             ),
             re.compile(r"personal\s+statement"),
             re.compile(r"why\s+this\s+college"),
             re.compile(r"write\s+me\s+an\s+essay"),
-            # Employment and career writing
-            re.compile(r"resignation\s+(email|letter)"),
-            re.compile(r"recommendation\s+letter"),
-            re.compile(r"letter\s+of\s+recommendation"),
-            re.compile(r"linkedin\s+(summary|profile|about|bio|section)"),
-            re.compile(r"job\s+application\s+(answer|response|essay)"),
-            re.compile(
-                r"(draft|write)\s+(an?\s+)?email\s+to\s+(a\s+|my\s+)?(professor|manager|boss|recruiter|teacher)"
-            ),
+            re.compile(r"resignation\s+(email|letter|note)"),
+            re.compile(r"(graduate\s+school|grad\s+school|job)\s+application"),
+            re.compile(r"funding\s+for\s+college\s+tuition"),
         ],
     ),
 ]
